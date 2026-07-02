@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env*.local
+.claude/CLAUDE.local.md
+.claude/settings.local.json
+npm-debug.log*
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts

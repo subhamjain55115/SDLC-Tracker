@@ -1,0 +1,105 @@
+{
+  "project": {
+    "name": "SampleProject",
+    "description": "A sample project to test the SDLC Tracker",
+    "tagline": "Demo roadmap for trying out Track Mode",
+    "core_principle": "Phase Gate is hard-locked — no bypass",
+    "v1_scope_boundary": "Only two phases in this sample",
+    "tech_stack": [
+      { "layer": "Frontend", "choice": "Next.js", "why": "Full-stack in one repo" }
+    ],
+    "architecture_overview": "A minimal two-phase roadmap to exercise every tracker feature.",
+    "success_metric_v1": "Both phases show DONE after ticking everything"
+  },
+  "brainstorm": {
+    "problem": "Need a small roadmap to verify the tracker works",
+    "pain_intensity": "3/10 — testing only",
+    "evidence": "Manual testing requires a known-good input file",
+    "user": "The developer testing this app",
+    "current_alternative": "Creating JSON by hand each time",
+    "insight": "A bundled sample removes all setup friction",
+    "core_loop": "Upload sample → tick steps → confirm gates",
+    "what_this_is_not": "Not a real project"
+  },
+  "plan": {
+    "key_features_v1": ["Two phases", "Tasks with sub-steps", "One task without sub-steps"],
+    "key_constraints": ["Must exercise the gate lock"]
+  },
+  "phases": [
+    {
+      "number": 1,
+      "name": "First Phase",
+      "colour_tag": "backend",
+      "one_line_mission": "Prove ticking and the phase gate work",
+      "status": "PENDING",
+      "completed_date": null,
+      "notes": "",
+      "done_criterion": "All sub-steps ticked and gate confirmed",
+      "tasks": [
+        {
+          "id": 1,
+          "description": "A task with sub-steps",
+          "ce_driver": "/ce-work",
+          "context_skills": ["tdd-mastery"],
+          "sub_op_plugins": ["/test-writer:unit-test"],
+          "one_line_treatment": "Verifies sub-step ticking auto-completes the task",
+          "done": false,
+          "sub_steps": [
+            { "id": "1a", "description": "First sub-step", "expected_output": "Checkbox ticks", "done": false },
+            { "id": "1b", "description": "Second sub-step", "expected_output": "Task turns green", "done": false }
+          ]
+        },
+        {
+          "id": 2,
+          "description": "A task without sub-steps",
+          "ce_driver": "/ce-work",
+          "context_skills": [],
+          "sub_op_plugins": [],
+          "one_line_treatment": "Verifies direct task ticking",
+          "done": false,
+          "sub_steps": []
+        }
+      ],
+      "phase_gate": {
+        "tasks_complete": false,
+        "done_criterion_met": false,
+        "code_review_passed": false,
+        "commit_done": false,
+        "confirmed_at": null
+      }
+    },
+    {
+      "number": 2,
+      "name": "Second Phase",
+      "colour_tag": "frontend",
+      "one_line_mission": "Starts LOCKED — unlocks only after Phase 1 gate is confirmed",
+      "status": "PENDING",
+      "completed_date": null,
+      "notes": "",
+      "done_criterion": "Phase unlocked and one task ticked",
+      "tasks": [
+        {
+          "id": 1,
+          "description": "Tick me after Phase 1 is done",
+          "ce_driver": "/ce-work",
+          "context_skills": [],
+          "sub_op_plugins": [],
+          "one_line_treatment": "Verifies the lock released",
+          "done": false,
+          "sub_steps": []
+        }
+      ],
+      "phase_gate": {
+        "tasks_complete": false,
+        "done_criterion_met": false,
+        "code_review_passed": false,
+        "commit_done": false,
+        "confirmed_at": null
+      }
+    }
+  ],
+  "v2_backlog": [
+    { "date": "2026-07-02", "idea": "A pre-seeded sample idea", "why_deferred": "Testing the backlog panel" }
+  ],
+  "decision_log": []
+}
