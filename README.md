@@ -7,11 +7,20 @@ A personal, single-user full-stack web app: upload a development-roadmap JSON, t
 - **Build Mode** — guided 4-stage wizard: 12 brainstorm questions → plan → roadmap builder (15-phase template pre-loaded) → export `<name>-roadmap.json`
 - **Track Mode** — upload the JSON, tick sub-steps, confirm the 4-item Phase Gate, unlock the next phase
 
+## Stack
+
+Next.js 14 App Router · Supabase (Postgres + Auth + RLS) · Tailwind CSS · SWR
+
 ## Quick Start
+
+1. Create a free project at [supabase.com](https://supabase.com)
+2. Run `supabase/migrations/0001_init.sql` in the SQL Editor (Dashboard → SQL Editor → paste → Run)
+3. In **Authentication → Sign In / Up**, disable "Allow new users to sign up" (the app enforces single-user at the API layer too, but this closes the Supabase-level door)
+4. Copy the three keys from **Project Settings → API** into `.env.local`:
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in the three values
+cp .env.example .env.local   # fill in URL, anon key, service role key
 npm run dev                  # http://localhost:3000
 ```
 
@@ -23,9 +32,9 @@ Test it: upload `examples/SampleProject-roadmap.json` from the main page.
 
 | Variable | What |
 |---|---|
-| `MONGODB_URI` | MongoDB connection string — local or Atlas (`mongodb+srv://...`) |
-| `NEXTAUTH_SECRET` | Random 32-byte string — `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | `http://localhost:3000` in dev; the production URL on Vercel |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL — Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon/public key — safe for the browser, RLS enforces access |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key for one-time account setup and seeding. Never exposed to the browser |
 
 ## Seeding the Admin User (alternative to first-visit setup)
 
@@ -35,7 +44,7 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=yourpassword npm run seed
 
 ## Resetting a Forgotten Password
 
-There is no public reset flow (single-user app). Delete the document in the `users` collection in MongoDB, then either visit `/login` (setup form reappears) or run the seed script again.
+Supabase Dashboard → Authentication → Users → select the user → Reset password (or delete the user and re-run setup).
 
 ## Roadmap JSON Schema
 
@@ -48,21 +57,25 @@ Only `project.name` and a non-empty `phases` array are strictly required — eve
 
 Re-uploading a JSON with the same project name merges it with existing progress — completed items are never lost.
 
-## Deploy (Vercel + MongoDB Atlas)
+## Deploy (Vercel + Supabase)
 
-1. Create a free MongoDB Atlas cluster, create a DB user, allow access from anywhere (or Vercel IPs), copy the connection string.
-2. Push this repo to GitHub.
-3. Import the repo in Vercel. Set `MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (the Vercel URL) as environment variables.
-4. Deploy. Visit the URL, create the single account, done.
+1. Push this repo to GitHub.
+2. Import the repo in Vercel. Set the same three environment variables.
+3. Deploy. Visit the URL, create the single account (or run the seed script), done.
 
 ## API Routes
 
 | Method | Route | Purpose |
 |---|---|---|
 | GET/POST | `/api/setup` | Check if first-run setup is needed / create the single user (403 after) |
-| GET/POST | `/api/auth/[...nextauth]` | NextAuth session handling |
 | GET | `/api/projects` | Project list with progress summaries |
 | POST | `/api/projects` | Upload roadmap JSON (creates or merges) |
 | GET | `/api/projects/[id]` | Full project with tick state |
 | PATCH | `/api/projects/[id]` | Actions: `tick_substep`, `tick_task`, `set_gate_item`, `confirm_gate`, `add_backlog`, `add_decision`, `set_notes` |
 | DELETE | `/api/projects/[id]` | Remove a project |
+
+Authentication is session-cookie based via Supabase Auth (`@supabase/ssr`); the middleware refreshes tokens and redirects unauthenticated page requests to `/login`.
+
+## Database
+
+One table: `projects` — `id uuid`, `name text unique`, `roadmap jsonb`, timestamps with an auto-update trigger. The entire roadmap (with tick state) lives in the `roadmap` JSONB column. Row Level Security is enabled; only authenticated users can access rows.

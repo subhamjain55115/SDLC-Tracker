@@ -1,9 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Header() {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -17,7 +27,7 @@ export default function Header() {
           <Link href="/build" className="btn-ghost">
             Build Mode
           </Link>
-          <button onClick={() => signOut({ callbackUrl: "/login" })} className="btn-ghost">
+          <button onClick={handleSignOut} className="btn-ghost">
             Sign out
           </button>
         </nav>

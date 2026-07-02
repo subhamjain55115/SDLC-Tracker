@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { dbConnect } from "@/lib/mongodb";
-import Project from "@/lib/models/Project";
+import { createClient } from "@/lib/supabase/server";
 import {
   currentPhaseName,
   deriveStatuses,
@@ -12,23 +9,31 @@ import {
 } from "@/lib/roadmap";
 import type { ProjectSummary, Roadmap } from "@/lib/types";
 
-async function requireSession() {
-  const session = await getServerSession(authOptions);
-  return session;
-}
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!(await requireSession())) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: { message: "Unauthorized" } }, { status: 401 });
   }
-  await dbConnect();
-  const projects = await Project.find().sort({ updatedAt: -1 }).lean();
-  const summaries: ProjectSummary[] = projects.map((p: any) => {
+
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id, name, roadmap, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    return NextResponse.json({ error: { message: error.message } }, { status: 500 });
+  }
+
+  const summaries: ProjectSummary[] = (data ?? []).map((p) => {
     const roadmap = p.roadmap as Roadmap;
     const progress = roadmapProgress(roadmap);
     const statuses = deriveStatuses(roadmap.phases);
     return {
-      id: p._id.toString(),
+      id: p.id,
       name: p.name,
       tagline: roadmap.project.tagline || roadmap.project.description,
       totalPhases: roadmap.phases.length,
@@ -37,16 +42,21 @@ export async function GET() {
       doneSubSteps: progress.doneUnits,
       percent: progress.percent,
       currentPhase: currentPhaseName(roadmap),
-      lastUpdated: p.updatedAt?.toISOString?.() ?? "",
+      lastUpdated: p.updated_at ?? "",
     };
   });
   return NextResponse.json({ data: summaries });
 }
 
 export async function POST(request: Request) {
-  if (!(await requireSession())) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: { message: "Unauthorized" } }, { status: 401 });
   }
+
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json(
@@ -72,18 +82,34 @@ export async function POST(request: Request) {
   }
   roadmap.project.name = projectName;
 
-  await dbConnect();
-  const existing = await Project.findOne({ name: projectName });
+  const { data: existing, error: findError } = await supabase
+    .from("projects")
+    .select("id, roadmap")
+    .eq("name", projectName)
+    .maybeSingle();
+  if (findError) {
+    return NextResponse.json({ error: { message: findError.message } }, { status: 500 });
+  }
+
   if (existing) {
     const merged = mergeRoadmaps(existing.roadmap as Roadmap, roadmap);
-    existing.roadmap = merged;
-    existing.markModified("roadmap");
-    await existing.save();
-    return NextResponse.json({ data: { id: existing._id.toString(), merged: true } });
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ roadmap: merged })
+      .eq("id", existing.id);
+    if (updateError) {
+      return NextResponse.json({ error: { message: updateError.message } }, { status: 500 });
+    }
+    return NextResponse.json({ data: { id: existing.id, merged: true } });
   }
-  const created = await Project.create({ name: projectName, roadmap });
-  return NextResponse.json(
-    { data: { id: created._id.toString(), merged: false } },
-    { status: 201 }
-  );
+
+  const { data: created, error: insertError } = await supabase
+    .from("projects")
+    .insert({ name: projectName, roadmap })
+    .select("id")
+    .single();
+  if (insertError) {
+    return NextResponse.json({ error: { message: insertError.message } }, { status: 500 });
+  }
+  return NextResponse.json({ data: { id: created.id, merged: false } }, { status: 201 });
 }

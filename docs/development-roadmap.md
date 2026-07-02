@@ -7,13 +7,13 @@
 | Phase | Status | Completed | Notes |
 |---|---|---|---|
 | Phase -1  Inception | DONE | 2026-07-02 | Spec in SDLC-Tracker-App.md; CLAUDE.md and roadmap created |
-| Phase 0   Discovery & ADRs | PENDING | — | — |
-| Phase 1   Environment Setup | PENDING | — | — |
-| Phase 2   Data Layer | PENDING | — | — |
-| Phase 3   Business Logic | PENDING | — | — |
-| Phase 4   Auth & Middleware | PENDING | — | — |
-| Phase 5   Interface — Main Page & Track Mode | PENDING | — | — |
-| Phase 6   Interface — Build Mode | PENDING | — | — |
+| Phase 0   Discovery & ADRs | PENDING | — | ADR files not yet written (code built first at user request) |
+| Phase 1   Environment Setup | IN PROGRESS | — | App scaffolded, builds clean, git repo committed; needs .env.local + first run |
+| Phase 2   Data Layer | IN PROGRESS | — | Supabase migration SQL, validation, seed script written; needs live Supabase verification |
+| Phase 3   Business Logic | IN PROGRESS | — | Tick engine, gate lock, merge, progress all implemented; unit tests not yet written |
+| Phase 4   Auth & Middleware | IN PROGRESS | — | Supabase Auth + closed registration + middleware implemented; integration tests pending |
+| Phase 5   Interface — Main Page & Track Mode | IN PROGRESS | — | All screens and API routes built; needs end-to-end verification with live DB |
+| Phase 6   Interface — Build Mode | IN PROGRESS | — | 4-stage wizard with 12 brainstorm questions built; needs end-to-end verification |
 | Phase 7   Security Audit | PENDING | — | — |
 | Phase 8   Performance | PENDING | — | — |
 | Phase 9   DevOps & Deployment | PENDING | — | — |
@@ -115,10 +115,10 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 | Task | CE Driver | Context Skills | Sub-op Plugins |
 |---|---|---|---|
 | Write ADR: Next.js 14 App Router over React+Vite | `/ce-work` | `nextjs-mastery` | `/adr-writer:write-adr` |
-| Write ADR: MongoDB over PostgreSQL | `/ce-work` | `database-optimization` | `/adr-writer:write-adr` |
-| Write ADR: NextAuth.js credentials provider for single-user auth | `/ce-work` | `security-hardening` | `/adr-writer:write-adr` |
-| Write ADR: Vercel + Atlas over self-hosted Hetzner | `/ce-work` | — | `/adr-writer:write-adr` |
-| Write ADR: Server-side state (MongoDB) over client-side (localStorage) | `/ce-work` | — | `/adr-writer:write-adr` |
+| Write ADR: Supabase Postgres (JSONB) over MongoDB | `/ce-work` | `database-optimization`, `postgres-optimization` | `/adr-writer:write-adr` |
+| Write ADR: Supabase Auth over NextAuth.js for single-user auth | `/ce-work` | `security-hardening` | `/adr-writer:write-adr` |
+| Write ADR: Vercel + Supabase over self-hosted Hetzner | `/ce-work` | — | `/adr-writer:write-adr` |
+| Write ADR: Server-side state (Postgres) over client-side (localStorage) | `/ce-work` | — | `/adr-writer:write-adr` |
 | Define MVP feature boundary — Build Mode vs Track Mode scope | `/ce-work` | — | `/discuss:discuss` |
 
 **Done criterion:** Five ADR files exist in `docs/decisions/`. MVP scope is written and agreed.
@@ -133,8 +133,8 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 |---|---|---|---|
 | Scaffold Next.js 14 App Router project | `/ce-work` | `nextjs-mastery` | `/project-scaffold:scaffold` |
 | Install and configure Tailwind CSS | `/ce-work` | `frontend-excellence` | `/project-scaffold:add-feature` |
-| Configure MongoDB connection with Mongoose | `/ce-work` | `database-optimization` | `/env-manager:env-setup` |
-| Set up NextAuth.js credentials provider | `/ce-work` | `security-hardening` | `/project-scaffold:add-feature` |
+| Configure Supabase clients (`@supabase/ssr` server + browser) | `/ce-work` | `database-optimization` | `/env-manager:env-setup` |
+| Set up Supabase Auth (email/password, session middleware) | `/ce-work` | `security-hardening` | `/project-scaffold:add-feature` |
 | Create `.env.example` with all required keys | `/ce-work` | `security-hardening` | `/env-manager:env-setup` |
 | Validate `.env` is in `.gitignore` | `/ce-work` | `security-hardening` | `/env-manager:env-validate` |
 | Set up git with `main` as protected branch | `/ce-work` | `git-advanced` | `/git-flow:flow-start` |
@@ -146,19 +146,19 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 
 ## Phase 2 — Data Layer
 
-**One-line mission:** MongoDB schema defined and validated; all collections created; seed works.
+**One-line mission:** Postgres schema defined with RLS; migration runs cleanly; seed works.
 
 | Task | CE Driver | Context Skills | Sub-op Plugins |
 |---|---|---|---|
 | Design `projects` collection schema with full JSON roadmap embedded | `/ce-work` | `database-optimization` | `/schema-designer:design-schema` |
-| Design `users` collection schema (single-user, email + bcrypt hash) | `/ce-work` | `security-hardening`, `database-optimization` | `/schema-designer:design-schema` |
-| Write Mongoose models: `Project`, `User` | `/ce-work` | `database-optimization` | — |
+| Users handled by Supabase Auth (`auth.users`) — no custom table needed | `/ce-work` | `security-hardening` | — |
+| Write migration SQL: `projects` table (JSONB roadmap, updated_at trigger, RLS policy) | `/ce-work` | `postgres-optimization` | `/migration-generator:create-migration` |
 | Write JSON schema validator for uploaded roadmap files | `/ce-work` | `typescript-advanced` | — |
 | Write seed script: create the one admin user | `/ce-work` | `security-hardening` | `/seed-generator:generate-seeds` |
 | Write seed script: insert one example project from sample JSON | `/ce-work` | — | `/seed-generator:seed-db` |
-| Verify seed runs cleanly and Atlas shows the documents | Manual | — | — |
+| Verify seed runs cleanly and Supabase dashboard shows the rows | Manual | — | — |
 
-**Done criterion:** `npm run seed` runs without error; MongoDB Atlas shows `users` and `projects` collections with correct shape.
+**Done criterion:** Migration SQL runs without error in Supabase; `npm run seed` creates the admin user; `projects` table visible with RLS enabled.
 
 ---
 
@@ -191,7 +191,7 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 
 | Task | CE Driver | Context Skills | Sub-op Plugins |
 |---|---|---|---|
-| Implement NextAuth credentials provider with bcrypt password check | `/ce-work` | `security-hardening`, `authentication-patterns` | — |
+| Implement Supabase Auth sign-in with session cookies (`@supabase/ssr`) | `/ce-work` | `security-hardening`, `authentication-patterns` | — |
 | Middleware: protect all routes except `/login` | `/ce-work` | `security-hardening` | — |
 | Registration gate: if `users` collection has ≥ 1 document, return 403 on any sign-up attempt | `/ce-work` | `security-hardening` | — |
 | Session: JWT in httpOnly cookie, 7-day expiry | `/ce-work` | `security-hardening` | — |
@@ -213,14 +213,14 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 |---|---|---|---|
 | Main page: project list with progress bars, + New Project button | `/ce-work` | `nextjs-mastery`, `react-patterns` | `/frontend-developer:create-component` |
 | Upload dialog: file picker, JSON validation feedback, project name preview from filename | `/ce-work` | `nextjs-mastery` | `/frontend-developer:create-component` |
-| API route: `POST /api/projects` — upload JSON, validate, store to MongoDB | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
+| API route: `POST /api/projects` — upload JSON, validate, store to Postgres | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
 | API route: `GET /api/projects` — return list with progress summary | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
 | API route: `GET /api/projects/[id]` — return full project with tick state | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
 | API route: `PATCH /api/projects/[id]` — update tick state (sub-step, task, gate item) | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
 | API route: `DELETE /api/projects/[id]` — remove project | `/ce-work` | `nextjs-mastery` | `/backend-architect:add-endpoint` |
 | Track Mode: Project State table — all phases with status badges (DONE/IN PROGRESS/PENDING/LOCKED) | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
 | Track Mode: Phase detail — expand phase to see all tasks and sub-steps | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
-| Track Mode: Sub-step checkbox — tick → saves to MongoDB → task auto-completes when all sub-steps ticked | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
+| Track Mode: Sub-step checkbox — tick → saves to Postgres → task auto-completes when all sub-steps ticked | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
 | Track Mode: Phase Gate — appears only when all tasks ticked; 4 checkboxes; Confirm button | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
 | Track Mode: Gate confirmation → phase DONE, date prompt, next phase unlocks | `/ce-work` | `react-patterns` | — |
 | Track Mode: Scope Lock sidebar — V2 backlog list + add idea button | `/ce-work` | `react-patterns` | `/frontend-developer:create-component` |
@@ -293,11 +293,11 @@ Written at the start of Phase 3. Lives at `docs/test-strategy.md`.
 | Task | CE Driver | Context Skills | Sub-op Plugins |
 |---|---|---|---|
 | Create Vercel project and connect to GitHub repo | `/ce-work` | — | — |
-| Configure environment variables on Vercel (MongoDB URI, NextAuth secret) | `/ce-work` | `security-hardening` | `/env-manager:env-setup` |
-| Create MongoDB Atlas cluster and user | `/ce-work` | `database-optimization` | — |
+| Configure environment variables on Vercel (Supabase URL, anon key, service role key) | `/ce-work` | `security-hardening` | `/env-manager:env-setup` |
+| Create Supabase project, run migration SQL, disable public sign-ups | `/ce-work` | `database-optimization` | — |
 | Configure CI: lint + type-check + unit tests on every push | `/ce-work` | `ci-cd-pipelines` | `/deploy-pilot:ci-pipeline` |
 | Verify: push to `main` → Vercel auto-deploys → live URL serves app | Manual | — | — |
-| Run seed script against Atlas production database to create the admin user | `/ce-work` | `security-hardening` | — |
+| Run seed script against production Supabase to create the admin user | `/ce-work` | `security-hardening` | — |
 | Verify login works on production URL | Manual | — | — |
 
 **Done criterion:** Production URL loads; login works; upload a JSON; project appears in list — all on the live deployment, not localhost.
