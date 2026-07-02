@@ -24,8 +24,11 @@ export default function Header() {
           <Link href="/" className="btn-ghost">
             Projects
           </Link>
+          <Link href="/quick-build" className="btn-ghost">
+            Quick Build Mode
+          </Link>
           <Link href="/build" className="btn-ghost">
-            Build Mode
+            Manual Build Mode
           </Link>
           <button onClick={handleSignOut} className="btn-ghost">
             Sign out
