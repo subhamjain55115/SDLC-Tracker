@@ -150,13 +150,13 @@ export const QUICK_STAGES: QuickStage[] = [
         id: "r3",
         label: "Roadmap reviewed",
         description:
-          "Read what Claude produced before accepting it. Check that phases are in dependency order, every phase has a done criterion you can verify, and every task carries its driver, skills, and plugins. Fix gaps now — they are ten times costlier mid-build.",
+          "Read what Claude produced before accepting it. Check that phases are in dependency order, every phase has a done criterion you can verify, every task carries its driver, skills, and plugins, and the file follows the strict format contract in SDLC.md. Fix gaps now — they are ten times costlier mid-build.",
       },
       {
         id: "r4",
-        label: "JSON exported by Claude",
+        label: "Converted to JSON by the tool",
         description:
-          "Ask Claude to export the roadmap as <ProjectName>-roadmap.json in the SDLC Tracker schema. The filename becomes the project name in the tracker.",
+          "Run the converter: python tools/roadmap_md_to_json.py docs/development-roadmap.md (in the SDLCTracker repo). It deterministically produces <ProjectName>-roadmap.json — JSON is never written by hand or by AI. If it fails, fix the markdown, never the JSON.",
       },
       {
         id: "r5",
