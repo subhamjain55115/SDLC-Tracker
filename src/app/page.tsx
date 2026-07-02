@@ -13,35 +13,57 @@ export default function HomePage() {
   const { data, mutate, isLoading } = useSWR<{ data: ProjectSummary[] }>("/api/projects", fetcher);
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadErrorDetails, setUploadErrorDetails] = useState<string[]>([]);
+  const [uploadStep, setUploadStep] = useState<"" | "converting" | "uploading">("");
 
   async function handleFile(file: File) {
     setUploadError("");
-    setUploading(true);
+    setUploadErrorDetails([]);
     try {
       const text = await file.text();
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        setUploadError(`${file.name} is not valid JSON`);
-        return;
+      let name: string;
+      let roadmap: unknown;
+
+      if (file.name.toLowerCase().endsWith(".md")) {
+        setUploadStep("converting");
+        const res = await fetch("/api/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markdown: text }),
+        });
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+          setUploadError(body?.error?.message ?? `Could not convert ${file.name}`);
+          setUploadErrorDetails(body?.error?.details ?? []);
+          return;
+        }
+        roadmap = body.data.roadmap;
+        name = body.data.roadmap.project.name;
+      } else {
+        try {
+          roadmap = JSON.parse(text);
+        } catch {
+          setUploadError(`${file.name} is not valid JSON`);
+          return;
+        }
+        name = projectNameFromFilename(file.name);
       }
-      const name = projectNameFromFilename(file.name);
+
+      setUploadStep("uploading");
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, roadmap: parsed }),
+        body: JSON.stringify({ name, roadmap }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        const details = body?.error?.details?.join?.("; ");
-        setUploadError(body?.error?.message + (details ? ` — ${details}` : "") || "Upload failed");
+        setUploadError(body?.error?.message ?? "Upload failed");
+        setUploadErrorDetails(body?.error?.details ?? []);
         return;
       }
       await mutate();
     } finally {
-      setUploading(false);
+      setUploadStep("");
       if (fileInput.current) fileInput.current.value = "";
     }
   }
@@ -64,7 +86,7 @@ export default function HomePage() {
             <input
               ref={fileInput}
               type="file"
-              accept=".json,application/json"
+              accept=".json,.md,application/json,text/markdown"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -74,17 +96,40 @@ export default function HomePage() {
             <button
               className="btn-primary"
               onClick={() => fileInput.current?.click()}
-              disabled={uploading}
+              disabled={uploadStep !== ""}
             >
-              {uploading ? "Uploading..." : "+ New Project"}
+              {uploadStep === "converting"
+                ? "Converting markdown..."
+                : uploadStep === "uploading"
+                  ? "Uploading..."
+                  : "+ New Project"}
             </button>
           </div>
         </div>
 
-        {uploadError && (
-          <p role="alert" className="mb-4 rounded-lg border border-red-800 bg-red-950 px-4 py-2 text-sm text-red-300">
-            {uploadError}
+        {uploadStep !== "" && (
+          <p aria-live="polite" className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-900 bg-indigo-950/40 px-4 py-2 text-sm text-indigo-300">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+            {uploadStep === "converting"
+              ? "Step 1 of 2 — converting roadmap.md to JSON..."
+              : "Step 2 of 2 — uploading to Track Mode..."}
           </p>
+        )}
+
+        {uploadError && (
+          <div role="alert" className="mb-4 rounded-lg border border-red-800 bg-red-950 px-4 py-2 text-sm text-red-300">
+            <p>{uploadError}</p>
+            {uploadErrorDetails.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-xs text-red-400">
+                {uploadErrorDetails.slice(0, 10).map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+                {uploadErrorDetails.length > 10 && (
+                  <li>...and {uploadErrorDetails.length - 10} more</li>
+                )}
+              </ul>
+            )}
+          </div>
         )}
 
         {isLoading && <p className="text-slate-400">Loading projects...</p>}
@@ -93,10 +138,11 @@ export default function HomePage() {
           <div className="card text-center">
             <p className="mb-2 text-slate-300">No projects yet.</p>
             <p className="text-sm text-slate-500">
-              Upload a <code className="text-indigo-400">&lt;name&gt;-roadmap.json</code> file, or
-              create one in{" "}
+              Upload a <code className="text-indigo-400">development-roadmap.md</code> (strict
+              format — converted automatically) or a{" "}
+              <code className="text-indigo-400">&lt;name&gt;-roadmap.json</code>, or create one in{" "}
               <Link href="/build" className="text-indigo-400 underline">
-                Build Mode
+                Manual Build Mode
               </Link>
               .
             </p>
