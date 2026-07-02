@@ -30,6 +30,9 @@ export default function Header() {
           <Link href="/build" className="btn-ghost">
             Manual Build Mode
           </Link>
+          <Link href="/mcp" className="btn-ghost">
+            MCP
+          </Link>
           <button onClick={handleSignOut} className="btn-ghost">
             Sign out
           </button>
