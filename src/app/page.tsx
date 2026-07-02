@@ -10,7 +10,9 @@ import type { ProjectSummary } from "@/lib/types";
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function HomePage() {
-  const { data, mutate, isLoading } = useSWR<{ data: ProjectSummary[] }>("/api/projects", fetcher);
+  const { data, mutate, isLoading } = useSWR<{ data: ProjectSummary[] }>("/api/projects", fetcher, {
+    refreshInterval: 10000,
+  });
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState("");
   const [uploadErrorDetails, setUploadErrorDetails] = useState<string[]>([]);

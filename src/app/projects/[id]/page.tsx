@@ -19,7 +19,8 @@ export default function TrackModePage() {
   const params = useParams<{ id: string }>();
   const { data, mutate, isLoading } = useSWR<ProjectResponse>(
     params?.id ? `/api/projects/${params.id}` : null,
-    fetcher
+    fetcher,
+    { refreshInterval: 5000 }
   );
 
   const project = data?.data;
