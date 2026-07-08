@@ -14,3 +14,6 @@ next-env.d.ts
 
 # secrets
 Credentials.md
+
+.vercel
+.env*
